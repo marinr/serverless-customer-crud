@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Customer CRUD API
+
+Parameters:
+  Environment:
+    Default: 'Dev'
+    Type: String
+
+Resources:
+  CustomerApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Customer CRUD API
+      StageName: !Ref Environment
+
+  GetCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs10.x
+      InlineCode: |-
+        exports.handler = async (event) => {
+            console.log(JSON.stringify(event));
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify({
+                name: "testName",
+                lastName: "testLastName"
+              })
+            };
+           return response;
+         };
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CustomerApiGateway
+            Path: /customer
+            Method: get
+
+  PostCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs10.x
+      CodeUri: create_customer_lambda/src
+      Events:
+        PostResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CustomerApiGateway
+            Path: /customer
+            Method: post
+
+Outputs:
+  CustomerApiGateway:
+    Description: 'Customer CRUD API'
+    Value: !Sub 'https://${CustomerApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/customer'
