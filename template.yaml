@@ -6,8 +6,19 @@ Parameters:
   Environment:
     Default: 'Dev'
     Type: String
+  TableName:
+    Default: 'CustomerTable'
+    Type: String
 
 Resources:
+  CustomerTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${TableName}-${Environment}
+      PrimaryKey:
+         Name: id
+         Type: String
+
   CustomerApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -19,24 +30,19 @@ Resources:
     Properties:
       Handler: index.handler
       Runtime: nodejs10.x
-      InlineCode: |-
-        exports.handler = async (event) => {
-            console.log(JSON.stringify(event));
-            const response = {
-              statusCode: 200,
-              body: JSON.stringify({
-                name: "testName",
-                lastName: "testLastName"
-              })
-            };
-           return response;
-         };
+      CodeUri: get_customer_lambda/src
+      Policies:
+        DynamoDBReadPolicy:
+          TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Sub ${TableName}-${Environment}
       Events:
         GetResource:
           Type: Api
           Properties:
             RestApiId: !Ref CustomerApiGateway
-            Path: /customer
+            Path: /customer/{id}
             Method: get
 
   PostCustomerFunction:
@@ -45,6 +51,12 @@ Resources:
       Handler: index.handler
       Runtime: nodejs10.x
       CodeUri: create_customer_lambda/src
+      Policies:
+        DynamoDBWritePolicy:
+          TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Sub ${TableName}-${Environment}
       Events:
         PostResource:
           Type: Api
